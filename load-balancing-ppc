@@ -1,0 +1,32 @@
+* Scenario * 
+
+ISP1: 192.168.8.1/24 -- Interface: WAN1
+ISP2: 192.168.9.1/24 -- Interface: WAN2
+
+* Script * 
+
+/ ip firewall mangle
+add chain=prerouting dst-address=192.168.8.0/24  action=accept in-interface=bridge
+add chain=prerouting dst-address=192.168.9.0/24  action=accept in-interface=bridge
+
+add chain=prerouting in-interface=WAN1 connection-mark=no-mark action=mark-connection new-connection-mark=WAN1_conn
+add chain=prerouting in-interface=WAN2 connection-mark=no-mark action=mark-connection new-connection-mark=WAN2_conn
+
+add chain=prerouting  in-interface=bridge connection-mark=no-mark dst-address-type=!local per-connection-classifier=both-addresses:2/0 action=mark-connection new-connection-mark=WAN1_conn 
+add chain=prerouting  in-interface=bridge connection-mark=no-mark dst-address-type=!local per-connection-classifier=both-addresses:2/1 action=mark-connection new-connection-mark=WAN2_conn
+
+add chain=prerouting connection-mark=WAN1_conn in-interface=bridge action=mark-routing new-routing-mark=to_WAN1
+add chain=prerouting connection-mark=WAN2_conn in-interface=bridge action=mark-routing new-routing-mark=to_WAN2
+
+add chain=output connection-mark=WAN1_conn action=mark-routing new-routing-mark=to_WAN1     
+add chain=output connection-mark=WAN2_conn action=mark-routing new-routing-mark=to_WAN2
+
+/ ip route
+add dst-address=0.0.0.0/0 gateway=192.168.8.1 routing-mark=to_WAN1 check-gateway=ping
+add dst-address=0.0.0.0/0 gateway=192.168.9.1 routing-mark=to_WAN2 check-gateway=ping
+add dst-address=0.0.0.0/0 gateway=192.168.8.1 distance=1 check-gateway=ping
+add dst-address=0.0.0.0/0 gateway=192.168.9.1 distance=2 check-gateway=ping
+
+/ ip firewall nat 
+add chain=srcnat out-interface=WAN1 action=masquerade
+add chain=srcnat out-interface=WAN2 action=masquerade
