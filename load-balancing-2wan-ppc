@@ -1,5 +1,7 @@
 * Scenario * 
 
+Share traffic equally (50% each) between two internet lines. 
+
 ISP1: 192.168.8.1/24 -- Interface: WAN1
 ISP2: 192.168.9.1/24 -- Interface: WAN2
 
